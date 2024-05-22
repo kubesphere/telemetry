@@ -19,9 +19,10 @@ package report
 import (
 	"context"
 	"encoding/json"
-	"k8s.io/klog/v2"
 	"os"
 	"time"
+
+	"k8s.io/klog/v2"
 )
 
 func NewLocalReport() Report {
@@ -32,6 +33,7 @@ type localReport struct {
 }
 
 func (r localReport) Save(ctx context.Context, data map[string]any) error {
+	klog.Infof("Save data to local file in current dir")
 	file, err := os.Create("clusterInfo-" + time.Now().Format(time.RFC3339))
 	if err != nil {
 		return err

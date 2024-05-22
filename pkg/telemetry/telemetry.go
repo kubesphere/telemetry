@@ -18,14 +18,15 @@ package telemetry
 
 import (
 	"context"
-	"k8s.io/apimachinery/pkg/util/wait"
-	"kubesphere.io/telemetry/pkg/telemetry/collector"
-	"kubesphere.io/telemetry/pkg/telemetry/report"
-	"sigs.k8s.io/controller-runtime/pkg/manager"
 	"time"
 
+	"golang.org/x/sync/errgroup"
 	"k8s.io/klog/v2"
 	runtimeclient "sigs.k8s.io/controller-runtime/pkg/client"
+	"sigs.k8s.io/controller-runtime/pkg/manager"
+
+	"kubesphere.io/telemetry/pkg/telemetry/collector"
+	"kubesphere.io/telemetry/pkg/telemetry/report"
 )
 
 func NewTelemetry(opts ...Option) manager.Runnable {
@@ -70,21 +71,24 @@ func WithReport(report report.Report) Option {
 func (t *telemetry) Start(ctx context.Context) error {
 	var data = make(map[string]interface{})
 	data["ts"] = time.Now().UTC().Format(time.RFC3339)
-	var collectionOpt = &collector.CollectorOpts{Client: t.client, Ctx: ctx}
-	var wg wait.Group
+	//var wg wait.Group
+	var wg errgroup.Group
 	for _, c := range t.collectors {
 		lc := c
-		wg.StartWithContext(ctx, func(ctx context.Context) {
-			value, err := lc.Collect(collectionOpt)
+		wg.Go(func() error {
+			value, err := lc.Collect(ctx, t.client)
 			if err != nil {
 				// retry
 				klog.Errorf("collector %s collect data error %v", lc.RecordKey(), err)
-				return
+				return err
 			}
 			data[lc.RecordKey()] = value
+			return nil
 		})
 	}
-	wg.Wait()
+	if err := wg.Wait(); err != nil {
+		return err
+	}
 
 	return t.report.Save(ctx, data)
 }

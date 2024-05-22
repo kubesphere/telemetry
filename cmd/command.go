@@ -18,12 +18,15 @@ package cmd
 
 import (
 	"fmt"
+
 	"github.com/spf13/cobra"
-	"kubesphere.io/telemetry/pkg/telemetry"
-	"kubesphere.io/telemetry/pkg/telemetry/report"
+	"kubesphere.io/telemetry/pkg/telemetry/collector"
 	runtimeclient "sigs.k8s.io/controller-runtime/pkg/client"
 	"sigs.k8s.io/controller-runtime/pkg/client/config"
 	"sigs.k8s.io/controller-runtime/pkg/manager/signals"
+
+	"kubesphere.io/telemetry/pkg/telemetry"
+	"kubesphere.io/telemetry/pkg/telemetry/report"
 )
 
 type telemetryOptions struct {
@@ -45,7 +48,7 @@ func NewTelemetryCommand(version string) *cobra.Command {
 		RunE: func(cmd *cobra.Command, args []string) error {
 			// get cli
 			cli, err := runtimeclient.New(config.GetConfigOrDie(), runtimeclient.Options{
-				Scheme: nil,
+				Scheme: collector.Schema,
 			})
 			if err != nil {
 				return err

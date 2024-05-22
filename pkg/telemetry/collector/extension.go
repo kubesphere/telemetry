@@ -17,10 +17,12 @@ limitations under the License.
 package collector
 
 import (
+	"context"
 	"fmt"
 	"time"
 
 	corev1alpha1 "kubesphere.io/api/core/v1alpha1"
+	runtimeClient "sigs.k8s.io/controller-runtime/pkg/client"
 )
 
 func init() {
@@ -37,9 +39,9 @@ func (e Extension) RecordKey() string {
 	return "extension"
 }
 
-func (e Extension) Collect(opts *CollectorOpts) (interface{}, error) {
+func (e Extension) Collect(ctx context.Context, client runtimeClient.Client) (interface{}, error) {
 	subsList := &corev1alpha1.InstallPlanList{}
-	err := opts.Client.List(opts.Ctx, subsList)
+	err := client.List(ctx, subsList)
 	if err != nil {
 		return nil, fmt.Errorf("get SubscriptionList error %v", err)
 	}

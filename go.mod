@@ -4,6 +4,7 @@ go 1.21
 
 require (
 	github.com/spf13/cobra v1.7.0
+	golang.org/x/sync v0.5.0
 	k8s.io/apimachinery v0.29.2
 	k8s.io/client-go v0.29.2
 	k8s.io/klog/v2 v2.120.1

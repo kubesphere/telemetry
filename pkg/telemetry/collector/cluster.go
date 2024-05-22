@@ -27,6 +27,7 @@ import (
 	"k8s.io/klog/v2"
 	"k8s.io/utils/pointer"
 	clusterv1alpha1 "kubesphere.io/api/cluster/v1alpha1"
+	runtimeClient "sigs.k8s.io/controller-runtime/pkg/client"
 )
 
 // collector cluster data
@@ -63,9 +64,9 @@ func (c Cluster) RecordKey() string {
 	return "clusters"
 }
 
-func (c Cluster) Collect(opts *CollectorOpts) (interface{}, error) {
+func (c Cluster) Collect(ctx context.Context, client runtimeClient.Client) (interface{}, error) {
 	var clusterList = &clusterv1alpha1.ClusterList{}
-	if err := opts.Client.List(opts.Ctx, clusterList); err != nil {
+	if err := client.List(ctx, clusterList); err != nil {
 		return c, nil
 	}
 	// statistics cluster Data
@@ -90,8 +91,8 @@ func (c Cluster) Collect(opts *CollectorOpts) (interface{}, error) {
 		if err != nil {
 			return nil, fmt.Errorf("get kube client from cluster %v error %v", cluster.Name, err)
 		}
-		resCluster[i].Namespace = c.getNamespace(opts.Ctx, kubeClient)
-		resCluster[i].Nodes = c.getNodes(opts.Ctx, kubeClient)
+		resCluster[i].Namespace = c.getNamespace(ctx, kubeClient)
+		resCluster[i].Nodes = c.getNodes(ctx, kubeClient)
 	}
 	return resCluster, nil
 }

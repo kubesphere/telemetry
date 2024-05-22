@@ -20,7 +20,8 @@ import (
 	"context"
 
 	iamv1beta1 "kubesphere.io/api/iam/v1beta1"
-	"kubesphere.io/api/tenant/v1beta1"
+	tenantv1beta1 "kubesphere.io/api/tenant/v1beta1"
+	runtimeClient "sigs.k8s.io/controller-runtime/pkg/client"
 )
 
 func init() {
@@ -36,18 +37,18 @@ func (p Project) RecordKey() string {
 	return "platform"
 }
 
-func (p Project) Collect(opts *CollectorOpts) (interface{}, error) {
-	workspaceList := &v1beta1.WorkspaceList{}
+func (p Project) Collect(ctx context.Context, client runtimeClient.Client) (interface{}, error) {
+	workspaceList := &tenantv1beta1.WorkspaceList{}
 	userList := &iamv1beta1.UserList{}
 
 	// counting the number of workspace
-	if err := opts.Client.List(opts.Ctx, workspaceList); err != nil {
+	if err := client.List(ctx, workspaceList); err != nil {
 		return nil, err
 	}
 	p.Workspace = len(workspaceList.Items)
 
 	// counting the number of user
-	if err := opts.Client.List(context.Background(), userList); err != nil {
+	if err := client.List(context.Background(), userList); err != nil {
 		return nil, err
 	}
 	p.User = len(userList.Items)

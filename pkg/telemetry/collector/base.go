@@ -19,6 +19,12 @@ package collector
 import (
 	"context"
 
+	"k8s.io/apimachinery/pkg/runtime"
+	runtimeutil "k8s.io/apimachinery/pkg/util/runtime"
+	clusterv1alpha1 "kubesphere.io/api/cluster/v1alpha1"
+	corev1alpha1 "kubesphere.io/api/core/v1alpha1"
+	iamv1beta1 "kubesphere.io/api/iam/v1beta1"
+	tenantv1beta1 "kubesphere.io/api/tenant/v1beta1"
 	runtimeClient "sigs.k8s.io/controller-runtime/pkg/client"
 )
 
@@ -29,14 +35,19 @@ type Collector interface {
 	// RecordKey  telemetry data key
 	RecordKey() string
 	// Collect telemetry data value
-	Collect(*CollectorOpts) (interface{}, error)
-}
-
-type CollectorOpts struct {
-	Client runtimeClient.Client
-	Ctx    context.Context
+	Collect(ctx context.Context, client runtimeClient.Client) (interface{}, error)
 }
 
 func register(collector Collector) {
 	Registered = append(Registered, collector)
+}
+
+var Schema = runtime.NewScheme()
+
+func init() {
+	// register scheme
+	runtimeutil.Must(clusterv1alpha1.AddToScheme(Schema))
+	runtimeutil.Must(corev1alpha1.AddToScheme(Schema))
+	runtimeutil.Must(tenantv1beta1.AddToScheme(Schema))
+	runtimeutil.Must(iamv1beta1.AddToScheme(Schema))
 }

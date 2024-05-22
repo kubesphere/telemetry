@@ -1,5 +1,5 @@
 # telemetry
-telemetry cluster data and send to cloud
+telemetry cluster data for kubesphere 4.x
 ```shell
 telemetry --url xxx --cloud-id xxx
 ```

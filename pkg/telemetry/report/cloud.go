@@ -39,6 +39,7 @@ type cloudReport struct {
 }
 
 func (r cloudReport) Save(ctx context.Context, data map[string]interface{}) error {
+	klog.Infof("Send data to kubesphere cloud")
 	data["cloudId"] = r.cloudID
 	// convert req data
 	reqData, err := json.Marshal(data)
