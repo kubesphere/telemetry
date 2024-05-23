@@ -63,6 +63,8 @@ func NewTelemetryCommand(version string) *cobra.Command {
 	}
 	cmd.Flags().StringVar(&o.url, "url", o.url, "the url for kubesphere cloud")
 	cmd.Flags().StringVar(&o.cloudID, "cloud-id", o.cloudID, "the id for kubesphere cloud")
+
+	cmd.AddCommand(versionCmd(version))
 	return cmd
 }
 
