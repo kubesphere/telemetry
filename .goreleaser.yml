@@ -7,8 +7,7 @@ before:
     - go mod tidy
 
 builds:
-  -
-    binary: telemetry
+  - binary: telemetry
     ldflags: -s -w -X main.version={{ .Version }}
     goos:
       - linux
@@ -22,24 +21,3 @@ release:
 
 universal_binaries:
   - replace: true
-
-brews:
-  -
-    name: telemetry
-    homepage: "https://github.com/kubesphere/telemetry"
-    tap:
-      owner: kubesphere
-      name: homebrew-tap
-    commit_author:
-      name: kubesphere
-      email: info@kubesphere.io
-
-checksum:
-  name_template: 'checksums.txt'
-
-changelog:
-  sort: asc
-  filters:
-    exclude:
-      - "^assets:"
-      - "^scripts:"
