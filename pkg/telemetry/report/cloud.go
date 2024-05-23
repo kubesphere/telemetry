@@ -21,6 +21,7 @@ import (
 	"context"
 	"encoding/json"
 	"fmt"
+	"kubesphere.io/telemetry/pkg/telemetry/collector"
 	"net/http"
 	"strings"
 
@@ -39,7 +40,6 @@ type cloudReport struct {
 }
 
 func (r cloudReport) Save(ctx context.Context, data map[string]interface{}) error {
-	klog.Infof("Send data to kubesphere cloud")
 	data["cloudId"] = r.cloudID
 	// convert req data
 	reqData, err := json.Marshal(data)
@@ -48,9 +48,9 @@ func (r cloudReport) Save(ctx context.Context, data map[string]interface{}) erro
 		return err
 	}
 	clusterId := ""
-	for _, cluster := range data["clusters"].([]map[string]any) {
-		if cluster["role"] == "host" {
-			clusterId = cluster["nid"].(string)
+	for _, cluster := range data["clusters"].([]collector.Cluster) {
+		if cluster.Role == "host" {
+			clusterId = cluster.Nid
 		}
 	}
 	if clusterId == "" { // When the data has not been collected yet
@@ -75,5 +75,6 @@ func (r cloudReport) Save(ctx context.Context, data map[string]interface{}) erro
 	if resp.StatusCode != http.StatusOK {
 		return fmt.Errorf("resp code expect %v, but get code %v ", http.StatusOK, resp.StatusCode)
 	}
+	klog.Infof("Send data to kubesphere cloud success")
 	return nil
 }

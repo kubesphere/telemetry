@@ -33,7 +33,6 @@ type localReport struct {
 }
 
 func (r localReport) Save(ctx context.Context, data map[string]any) error {
-	klog.Infof("Save data to local file in current dir")
 	file, err := os.Create("clusterInfo-" + time.Now().Format(time.RFC3339))
 	if err != nil {
 		return err
@@ -50,5 +49,6 @@ func (r localReport) Save(ctx context.Context, data map[string]any) error {
 		return err
 	}
 
+	klog.Infof("Save data to local file in current dir success")
 	return nil
 }
