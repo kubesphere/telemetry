@@ -25,8 +25,8 @@ universal_binaries:
 
 brews:
   -
-    name: ksbuilder
-    homepage: "https://github.com/kubesphere/ksbuilder"
+    name: telemetry
+    homepage: "https://github.com/kubesphere/telemetry"
     tap:
       owner: kubesphere
       name: homebrew-tap
