@@ -1,0 +1,11 @@
+approvers:
+    - pixiake # oncall
+    - liangzai006
+    - wansir
+    - redscholar
+
+reviewers:
+    - pixiake
+    - liangzai006
+    - wansir
+    - redscholar
