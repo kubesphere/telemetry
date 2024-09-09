@@ -19,6 +19,7 @@ package collector
 import (
 	"context"
 	"fmt"
+	"k8s.io/apimachinery/pkg/util/json"
 	"strings"
 
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
@@ -76,11 +77,9 @@ func (c Cluster) Collect(ctx context.Context, client runtimeClient.Client) (inte
 			return nil, fmt.Errorf("collector cluster  %s error. cluster is not ready", cluster.Name)
 		}
 		resCluster[i] = Cluster{
-			Name:           cluster.Name,
-			Uid:            string(cluster.UID),
-			Nid:            string(cluster.Status.UID),
-			KSVersion:      cluster.Status.KubeSphereVersion,
-			ClusterVersion: cluster.Status.KubernetesVersion,
+			Name: cluster.Name,
+			Uid:  string(cluster.UID),
+			Nid:  string(cluster.Status.UID),
 		}
 		if _, ok := cluster.Labels[clusterv1alpha1.HostCluster]; ok {
 			resCluster[i].Role = "host"
@@ -93,6 +92,7 @@ func (c Cluster) Collect(ctx context.Context, client runtimeClient.Client) (inte
 		}
 		resCluster[i].Namespace = c.getNamespace(ctx, kubeClient)
 		resCluster[i].Nodes = c.getNodes(ctx, kubeClient)
+		resCluster[i].KSVersion, resCluster[i].ClusterVersion = c.getVersion(ctx, kubeClient, cluster)
 	}
 	return resCluster, nil
 }
@@ -152,4 +152,29 @@ func (c Cluster) getNodes(ctx context.Context, kubeClient kubernetes.Interface) 
 		}
 	}
 	return resNode
+}
+
+func (c Cluster) getVersion(ctx context.Context, client kubernetes.Interface, cluster clusterv1alpha1.Cluster) (string, string) {
+	response, err := client.CoreV1().RESTClient().Get().
+		AbsPath("/api/v1/namespaces/kubesphere-system/services/:ks-apiserver:/proxy/version").DoRaw(ctx)
+	if err != nil {
+		klog.Errorf("get cluster version error %v", err)
+		return cluster.Status.KubeSphereVersion, cluster.Status.KubernetesVersion
+	}
+	res := struct {
+		GitVersion string `json:"gitVersion"`
+		GitCommit  string `json:"gitCommit"`
+		BuildDate  string `json:"buildDate"`
+		Kubernetes struct {
+			GitVersion string `json:"gitVersion"`
+			GitCommit  string `json:"gitCommit"`
+			BuildDate  string `json:"buildDate"`
+		} `json:"kubernetes"`
+	}{}
+	if err := json.Unmarshal(response, &res); err != nil {
+		klog.Errorf("unmarshal cluster version error %v", err)
+		return cluster.Status.KubeSphereVersion, cluster.Status.KubernetesVersion
+	}
+	return fmt.Sprintf("{\"gitVersion\":\"%s\",\"gitCommit\":\"%s\",\"buildDate\":\"%s\"}", res.GitVersion, res.GitCommit, res.BuildDate),
+		fmt.Sprintf("{\"gitVersion\":\"%s\",\"gitCommit\":\"%s\",\"buildDate\":\"%s\"}", res.Kubernetes.GitVersion, res.Kubernetes.GitCommit, res.Kubernetes.BuildDate)
 }
