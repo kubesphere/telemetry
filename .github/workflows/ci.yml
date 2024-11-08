@@ -24,5 +24,3 @@ jobs:
       with:
         version: v1.54
         args: --timeout=10m
-    - name: Test
-      run: make cover

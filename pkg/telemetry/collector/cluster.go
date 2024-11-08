@@ -19,16 +19,17 @@ package collector
 import (
 	"context"
 	"fmt"
-	"k8s.io/apimachinery/pkg/util/json"
 	"strings"
+
+	"k8s.io/apimachinery/pkg/util/json"
 
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/client-go/kubernetes"
 	"k8s.io/client-go/tools/clientcmd"
 	"k8s.io/klog/v2"
-	"k8s.io/utils/pointer"
+	"k8s.io/utils/ptr"
 	clusterv1alpha1 "kubesphere.io/api/cluster/v1alpha1"
-	runtimeClient "sigs.k8s.io/controller-runtime/pkg/client"
+	runtimeclient "sigs.k8s.io/controller-runtime/pkg/client"
 )
 
 // collector cluster data
@@ -65,7 +66,7 @@ func (c Cluster) RecordKey() string {
 	return "clusters"
 }
 
-func (c Cluster) Collect(ctx context.Context, client runtimeClient.Client) (interface{}, error) {
+func (c Cluster) Collect(ctx context.Context, client runtimeclient.Client) (interface{}, error) {
 	var clusterList = &clusterv1alpha1.ClusterList{}
 	if err := client.List(ctx, clusterList); err != nil {
 		return c, nil
@@ -103,6 +104,7 @@ func (c Cluster) getKubeClient(config []byte) (kubernetes.Interface, error) {
 		return nil, err
 	}
 	restConfig, err := clientConfig.ClientConfig()
+	restConfig.Host = "https://172.31.19.43:6443" // todo for debug
 	if err != nil {
 		klog.Errorf("get cluster rest config error %v", err)
 		return nil, err
@@ -115,7 +117,7 @@ func (c Cluster) getKubeClient(config []byte) (kubernetes.Interface, error) {
 	return kubeClient, nil
 }
 func (c Cluster) getNamespace(ctx context.Context, kubeClient kubernetes.Interface) int {
-	namespaceList, err := kubeClient.CoreV1().Namespaces().List(ctx, metav1.ListOptions{TimeoutSeconds: pointer.Int64(30)})
+	namespaceList, err := kubeClient.CoreV1().Namespaces().List(ctx, metav1.ListOptions{TimeoutSeconds: ptr.To[int64](30)})
 	if err != nil {
 		klog.Errorf("list namespace error %v", err)
 		return 0
@@ -124,7 +126,7 @@ func (c Cluster) getNamespace(ctx context.Context, kubeClient kubernetes.Interfa
 }
 
 func (c Cluster) getNodes(ctx context.Context, kubeClient kubernetes.Interface) []Node {
-	nodeList, err := kubeClient.CoreV1().Nodes().List(ctx, metav1.ListOptions{TimeoutSeconds: pointer.Int64(30)})
+	nodeList, err := kubeClient.CoreV1().Nodes().List(ctx, metav1.ListOptions{TimeoutSeconds: ptr.To[int64](30)})
 	if err != nil {
 		klog.Errorf("get node list from cluster kube config error %v", err)
 		return nil

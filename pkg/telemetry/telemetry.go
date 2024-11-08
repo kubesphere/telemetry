@@ -18,9 +18,11 @@ package telemetry
 
 import (
 	"context"
+	"encoding/json"
 	"time"
 
 	"golang.org/x/sync/errgroup"
+	"k8s.io/client-go/rest"
 	"k8s.io/klog/v2"
 	runtimeclient "sigs.k8s.io/controller-runtime/pkg/client"
 	"sigs.k8s.io/controller-runtime/pkg/manager"
@@ -40,11 +42,9 @@ func NewTelemetry(opts ...Option) manager.Runnable {
 }
 
 type telemetry struct {
-	client     runtimeclient.Client
+	config     *rest.Config
 	collectors []collector.Collector
 	report     report.Report
-
-	cloudID string
 }
 
 func (t *telemetry) RegisterCollector(cs ...collector.Collector) {
@@ -55,9 +55,9 @@ func (t *telemetry) RegisterCollector(cs ...collector.Collector) {
 type Option func(*telemetry)
 
 // WithClient set kubernetes client to collector data.
-func WithClient(cli runtimeclient.Client) Option {
+func WithConfig(config *rest.Config) Option {
 	return func(t *telemetry) {
-		t.client = cli
+		t.config = config
 	}
 }
 
@@ -69,6 +69,12 @@ func WithReport(report report.Report) Option {
 }
 
 func (t *telemetry) Start(ctx context.Context) error {
+	cli, err := runtimeclient.New(t.config, runtimeclient.Options{
+		Scheme: collector.Schema,
+	})
+	if err != nil {
+		return err
+	}
 	var data = make(map[string]interface{})
 	data["ts"] = time.Now().UTC().Format(time.RFC3339)
 	//var wg wait.Group
@@ -76,7 +82,7 @@ func (t *telemetry) Start(ctx context.Context) error {
 	for _, c := range t.collectors {
 		lc := c
 		wg.Go(func() error {
-			value, err := lc.Collect(ctx, t.client)
+			value, err := lc.Collect(ctx, cli)
 			if err != nil {
 				// retry
 				klog.Errorf("collector %s collect data error %v", lc.RecordKey(), err)
@@ -89,6 +95,18 @@ func (t *telemetry) Start(ctx context.Context) error {
 	if err := wg.Wait(); err != nil {
 		return err
 	}
+	dataMap, err := serializeMap(data)
+	if err != nil {
+		klog.Errorf("failed to serializeMap %v", err)
+	}
+	return t.report.Save(ctx, dataMap)
+}
 
-	return t.report.Save(ctx, data)
+func serializeMap(data map[string]any) (map[string]any, error) {
+	bs, err := json.Marshal(data)
+	if err != nil {
+		return nil, err
+	}
+	dataMap := make(map[string]any)
+	return dataMap, json.Unmarshal(bs, &dataMap)
 }
