@@ -16,9 +16,39 @@ limitations under the License.
 
 package report
 
-import "context"
+import (
+	"context"
+	"net/http"
+
+	"golang.org/x/time/rate"
+)
 
 // save data to Report
 type Report interface {
 	Save(ctx context.Context, data map[string]any) error
+}
+
+// KSCloudClient rate limit http client to ksCloud
+var KSCloudClient = newRateLimitedHTTPClient(5, 10)
+
+func newRateLimitedHTTPClient(rps int, burst int) *http.Client {
+	limiter := rate.NewLimiter(rate.Limit(rps), burst)
+	return &http.Client{
+		Transport: &rateLimitedTransport{
+			Transport:   http.DefaultTransport,
+			RateLimiter: limiter,
+		},
+	}
+}
+
+type rateLimitedTransport struct {
+	Transport   http.RoundTripper
+	RateLimiter *rate.Limiter
+}
+
+func (t *rateLimitedTransport) RoundTrip(req *http.Request) (*http.Response, error) {
+	if err := t.RateLimiter.Wait(req.Context()); err != nil {
+		return nil, err
+	}
+	return t.Transport.RoundTrip(req)
 }

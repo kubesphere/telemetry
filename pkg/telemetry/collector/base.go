@@ -25,7 +25,7 @@ import (
 	corev1alpha1 "kubesphere.io/api/core/v1alpha1"
 	iamv1beta1 "kubesphere.io/api/iam/v1beta1"
 	tenantv1beta1 "kubesphere.io/api/tenant/v1beta1"
-	runtimeClient "sigs.k8s.io/controller-runtime/pkg/client"
+	runtimeclient "sigs.k8s.io/controller-runtime/pkg/client"
 )
 
 var Registered []Collector
@@ -35,7 +35,7 @@ type Collector interface {
 	// RecordKey  telemetry data key
 	RecordKey() string
 	// Collect telemetry data value
-	Collect(ctx context.Context, client runtimeClient.Client) (interface{}, error)
+	Collect(ctx context.Context, client runtimeclient.Client) (interface{}, error)
 }
 
 func register(collector Collector) {

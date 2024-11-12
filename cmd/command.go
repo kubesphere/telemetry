@@ -17,11 +17,12 @@ limitations under the License.
 package cmd
 
 import (
+	"flag"
 	"fmt"
+	"os"
+	"time"
 
 	"github.com/spf13/cobra"
-	"kubesphere.io/telemetry/pkg/telemetry/collector"
-	runtimeclient "sigs.k8s.io/controller-runtime/pkg/client"
 	"sigs.k8s.io/controller-runtime/pkg/client/config"
 	"sigs.k8s.io/controller-runtime/pkg/manager/signals"
 
@@ -29,13 +30,27 @@ import (
 	"kubesphere.io/telemetry/pkg/telemetry/report"
 )
 
+const (
+	ENV_HISTORY_RETENTION   = "TELEMETRY_HISTORY_RETENTION"
+	defaultHistoryRetention = 365 * 24 * time.Hour
+)
+
 type telemetryOptions struct {
 	url     string
 	cloudID string
+	// clusterInfo live time. valid when product is kse.
+	historyRetention time.Duration
 }
 
 func defaultTelemetryOptions() *telemetryOptions {
-	return &telemetryOptions{}
+	// get history retension from env
+	hr, err := time.ParseDuration(os.Getenv(ENV_HISTORY_RETENTION))
+	if err != nil || hr == 0 {
+		hr = defaultHistoryRetention
+	}
+	return &telemetryOptions{
+		historyRetention: hr,
+	}
 }
 
 func NewTelemetryCommand(version string) *cobra.Command {
@@ -47,23 +62,24 @@ func NewTelemetryCommand(version string) *cobra.Command {
 		Version: version,
 		RunE: func(cmd *cobra.Command, args []string) error {
 			// get cli
-			cli, err := runtimeclient.New(config.GetConfigOrDie(), runtimeclient.Options{
-				Scheme: collector.Schema,
-			})
-			if err != nil {
-				return err
+			// set report
+			var reporter report.Report
+			if o.url == "" {
+				reporter = report.NewLocalReport()
+			} else { // sync to cloud
+				rt, err := report.NewCloudReport(o.url, o.cloudID, o.historyRetention, config.GetConfigOrDie())
+				if err != nil {
+					return err
+				}
+				reporter = rt
 			}
-
-			rt := report.NewLocalReport()
-			if o.url != "" {
-				rt = report.NewCloudReport(o.url, o.cloudID)
-			}
-			return telemetry.NewTelemetry(telemetry.WithClient(cli), telemetry.WithReport(rt)).Start(signals.SetupSignalHandler())
+			return telemetry.NewTelemetry(telemetry.WithConfig(config.GetConfigOrDie()), telemetry.WithReport(reporter)).Start(signals.SetupSignalHandler())
 		},
 	}
+	cmd.Flags().AddGoFlagSet(flag.CommandLine)
 	cmd.Flags().StringVar(&o.url, "url", o.url, "the url for kubesphere cloud")
 	cmd.Flags().StringVar(&o.cloudID, "cloud-id", o.cloudID, "the id for kubesphere cloud")
-
+	cmd.Flags().DurationVar(&o.historyRetention, "history-retention", o.historyRetention, "how long the clusterInfo crd retention. ")
 	cmd.AddCommand(versionCmd(version))
 	return cmd
 }

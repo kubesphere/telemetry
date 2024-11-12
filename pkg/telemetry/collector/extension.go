@@ -22,7 +22,7 @@ import (
 	"time"
 
 	corev1alpha1 "kubesphere.io/api/core/v1alpha1"
-	runtimeClient "sigs.k8s.io/controller-runtime/pkg/client"
+	runtimeclient "sigs.k8s.io/controller-runtime/pkg/client"
 )
 
 func init() {
@@ -39,7 +39,7 @@ func (e Extension) RecordKey() string {
 	return "extension"
 }
 
-func (e Extension) Collect(ctx context.Context, client runtimeClient.Client) (interface{}, error) {
+func (e Extension) Collect(ctx context.Context, client runtimeclient.Client) (interface{}, error) {
 	subsList := &corev1alpha1.InstallPlanList{}
 	err := client.List(ctx, subsList)
 	if err != nil {
